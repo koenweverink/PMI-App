@@ -33,7 +33,7 @@ from email.mime.text import MIMEText
 from matplotlib.mathtext import math_to_image
 from fpdf import FPDF
 
-Window.size = (350,600)
+#  Window.size = (350,600)
 KV = '''    
 <ItemDrawer>:
     theme_text_color: "Custom"
