@@ -1375,9 +1375,9 @@ class PMIApp(MDApp):
         
         subject = "Rapport Post Mortem Interval"
         body = "In het bijgevoegde PDF-bestand kunt u het rapport van het berekende PMI vinden."
-        sender_email = "postmortem.app@gmail.com"
+        sender_email = ## Zelf aanmaken
         receiver_email = email
-        password = "PostMortemInterval"
+        password = ## Zelf aanmaken
 
         message = MIMEMultipart()
         message["From"] = sender_email
