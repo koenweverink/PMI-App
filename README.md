@@ -15,7 +15,7 @@ This is a project made for the Police Academy of Apeldoorn. This app uses the He
 The resulting popup will tell you the estimated time of death.
 
 You can now press "Back" to go back to the main screen, or "Save" to start the saving procedure. 
-If you have pressed "Save", enter a case number and press "Save".
+If you have pressed "Save", enter a case number and press "Save" again.
 Now press "Back"
 
 On the bottom of the screen there is a tab called "Saved PMI". Press here to see the saved PMIs. NOTE: if you have just entered a new PMI, you must refresh the page by pulling the page down. Click on a case number and here you will see all kinds of information regarding the calculation, such as:
