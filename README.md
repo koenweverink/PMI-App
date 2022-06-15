@@ -1,6 +1,9 @@
 # PMI-App
 
 This is a project made for the Police Academy of Apeldoorn. This app uses the Henssge method to calculate the Post Mortem Interval (PMI). 
+This is the uncompiled code. If you want to build it into a working app, you will need a Linux machine with the buildozer library installed. 
+
+The app can be found in the Google Play store as PMI Calculator (https://play.google.com/store/apps/details?id=com.policeacademy.pmi.pmiapp&gl=NL).
 
 ## Guide
 
