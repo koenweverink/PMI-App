@@ -23,17 +23,12 @@ from kivy.lang import Builder
 from kivy.core.window import Window
 from datetime import datetime, date, time, timedelta
 
-import math, os, smtplib, ssl, email, json
-
-# from email import encoders
-# from email.mime.base import MIMEBase
-# from email.mime.multipart import MIMEMultipart
-# from email.mime.text import MIMEText
-
 from matplotlib.mathtext import math_to_image
-# from fpdf import FPDF
+
+import math
 
 
+### This is the Kivy (MD) stylesheet. In future versions this can be put in a seperate file, but for now it needs to be here. 
 KV = '''    
 <ItemDrawer>:
     theme_text_color: "Custom"
@@ -70,18 +65,6 @@ KV = '''
     MDTextField:
         id: casenr
         hint_text: "Zaaknummer"
-
-
-# <ContentEmail>:
-#     orientation: "vertical"
-#     spacing: "12dp"
-#     size_hint_y: None
-#     height: "200dp"
-
-#     MDTextField:
-#         id: email
-#         hint_text: "Email"
-
 
     
 <SwipeToDeleteItem>:
@@ -307,26 +290,22 @@ class Content(BoxLayout):
     pass
 
 
-# class ContentEmail(BoxLayout):
-#     pass
-
-
 class SwipeToDeleteItem(MDCardSwipe):
     text = StringProperty()
+
 
 class CasesList(OneLineAvatarIconListItem):
     text = StringProperty()
 
-
+### This is where the content and functionality of the app is 
 class PMIApp(MDApp):
-    
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
 
-        self.store = JsonStore('pmi.json')
-        
+        self.store = JsonStore('pmi.json')        
         self.screen = Builder.load_string(KV)
 
+        # Set the dropdown menu items
         menu_items_cover = [{"text": "Naakt"}, 
                         {"text": "Een of twee dunne lagen"},
                         {"text": "Een of twee dikke lagen"},
@@ -369,7 +348,7 @@ class PMIApp(MDApp):
         self.surFact_nl = instance_menu_item.text
         self.callback_surFact(self.surFact_nl)
 
-    
+    # Here the Saved Pmi list gets made and updated
     def remove_item(self, instance):
         if self.store.exists(instance.text):
             self.store.delete(instance.text)
@@ -400,7 +379,7 @@ class PMIApp(MDApp):
         
         Clock.schedule_once(refresh_callback, 1)
 
-
+    # Here the report gets generated that is shown when an item on the saved pmi's is pressed
     def get_report(self, inst):
         self.root.ids.report.clear_widgets()
         self.root.ids.screen_manager.current = 'PMI Report'
@@ -519,12 +498,7 @@ class PMIApp(MDApp):
             MDSeparator()
         )
 
-        
-        # self.root.ids.report.add_widget(
-        #     MDRaisedButton(text='Email report', on_release=lambda *args: self.dialog_email(casenr, *args)) 
-        # )
-
-
+    # Here are the callbacks for the body covering and environmental factors
     def callback_cover(self, cover):
         if self.cover_nl == "Naakt":
             self.cover = "Naked"
@@ -572,6 +546,7 @@ class PMIApp(MDApp):
             return self.surFact
 
 
+   # Calculate the PMI using the user imput
     def calc_pmi(self):
         try: 
             self.t_rectum_c = self.screen.ids.bodyTemp.text.replace(',', '.')
@@ -639,7 +614,7 @@ class PMIApp(MDApp):
 
         print(self.pmi_text)        
 
-        # Get the uncertainty, longest time and shortest time and format it into readable text 
+        # Get the uncertainty, max pmi and min pmi and format it into readable text 
         uncertainty, longest_time, shortest_time = self.get_longest_shortest_time(self.t_ambient_c, self.body_wt_kg, best_time, self.cover, self.surFact)
 
         if uncertainty == 69:
@@ -682,16 +657,6 @@ class PMIApp(MDApp):
                 print(self.longest_shortest_text)
 
             return self.pmi_text, self.longest_shortest_text
-        
-        # except ValueError:
-        #     self.pmi = "Error, "
-        #     self.longest_shortest_text = "vul een geldige waarde in."
-        #     return self.pmi, self.longest_shortest_text
-        
-        # except AttributeError:
-        #     self.pmi = "Error, "
-        #     self.longest_shortest_text = "vul een geldige waarde in."
-        #     return self.pmi, self.longest_shortest_text   
 
 
     # Calculate the right side of the Henssge formula
@@ -702,6 +667,7 @@ class PMIApp(MDApp):
             return (1.1100000000000001 * math.exp(bigB * f) - 0.11 * math.exp(10 * bigB * f))
 
 
+    # Define the min/max pmi
     def get_longest_shortest_time(self, t_ambient_c, body_wt_kg, best_time, cover, surFact):
         uncertainty = self.get_uncertainty(self.t_ambient_c, self.body_wt_kg, best_time, cover, surFact)
 
@@ -722,6 +688,7 @@ class PMIApp(MDApp):
             return uncertainty, longest_time, shortest_time
 
     
+    # Define uncertainty
     def get_uncertainty(self, t_ambient_c, body_wt_kg, best_time, cover, surFact):
         uncertainty = 2.8
         if self.t_ambient_c > 23:
@@ -1082,24 +1049,25 @@ class PMIApp(MDApp):
             return uncertainty 
         
 
+    # Define a specific combination of factors that messes with results 
     def Category4570(self, cover, surFact):
         if cover != 'Naked' and surFact == 'StillAirBodyDry':
             uncertainty = 7
         else:
             uncertainty = 4.5
         return uncertainty
-        # return uncertainty !  Naked  &  StillAirBodyDry   ? 7 : 4.5
     
 
+    # Define a specific combination of factors that messes with results
     def Category3245(self, cover, surFact):  
         if cover != 'Naked' and surFact == 'StillAirBodyDry':
             uncertainty = 4.5
         else:
             uncertainty = 3.2
         return uncertainty
-        # return uncertainty !  Naked  &  StillAirBodyDry   ? 4.5 : 3.2
 
     
+    # Get the corrective factor
     def get_corrective_factor(self, cover, surFact):
         if surFact == 'StillAirBodyDry':
             if cover == 'Naked':
@@ -1212,6 +1180,7 @@ class PMIApp(MDApp):
         return 1.0
 
 
+    # Show the dialog screens
     def show_alert_dialog(self):
         pmi, longest_shortest_text = self.calc_pmi()
         
@@ -1247,6 +1216,8 @@ class PMIApp(MDApp):
         
         self.bodytemp_dialog.open()
 
+
+    # Save funtion 
     def save(self, inst):
         casenr = self.dialog_save.content_cls.ids.casenr.text
         datetime_calc = self.selected_datetime
@@ -1277,6 +1248,8 @@ class PMIApp(MDApp):
                         min_pmi=min_pmi, max_pmi=max_pmi, bodyTemp=bodyTemp, surTemp=surTemp, bodyWeight=bodyWeight,
                         cover=cover, surFact=surFact, formula=casenr + '_formula.png', formulaB=casenr + 'B.png')
 
+
+    # Dismissals for the dialogs
     def dismiss_alert_dialog_pmi(self, inst):
         self.dialog_pmi.dismiss()
 
@@ -1289,6 +1262,7 @@ class PMIApp(MDApp):
         self.bodytemp_dialog.dismiss()
 
     
+    # Clock
     def show_time_picker(self):
         current_time = datetime.now().time()
 
@@ -1297,7 +1271,8 @@ class PMIApp(MDApp):
         time_dialog.bind(time=self.get_time)
         time_dialog.open()
 
-    
+
+    # Get user input clock
     def get_time(self, instance, time):
         self.time = time
         time_button = self.root.ids.time_button
@@ -1307,11 +1282,13 @@ class PMIApp(MDApp):
         return self.time
 
 
+    # Calender 
     def show_date_picker(self):
         date_dialog = MDDatePicker(callback=self.get_date)
         date_dialog.open()
 
 
+    # Get user input Calendar
     def get_date(self, *args):
         date_button = self.root.ids.date_button
         date_button.text = str(args[0])
@@ -1320,115 +1297,13 @@ class PMIApp(MDApp):
         return self.date
 
 
-    # def dialog_email(self, casenr, inst):
-    #     self.dialog_email = MDDialog(title="Voer uw e-mailadres in:", type="custom", content_cls=ContentEmail(), buttons=[
-    #         MDFlatButton(text="BACK", text_color=self.theme_cls.primary_color, on_release=self.dismiss_alert_dialog_email),
-    #         MDFlatButton(text="SEND", text_color=self.theme_cls.primary_color, on_press=lambda *args:self.send_email(casenr, *args), on_release=self.dismiss_alert_dialog_email),
-    #         ],
-    #     )
-
-    #     self.dialog_email.open()
-
-    
-    # def dismiss_alert_dialog_email(self, inst):
-    #     self.dialog_email.dismiss()
-
-    # def send_email(self, casenr, inst):
-    #     email = self.dialog_email.content_cls.ids.email.text
-    #     pdf = FPDF()
-  
-    #     pdf.add_page()
-    #     pdf.set_font("Arial", size = 12)
-    #     pdf.cell(200, 10, txt = "Post Mortem Interval App", 
-    #             ln = 1, align = 'C')
-        
-    #     pdf.cell(200, 10, txt = "Een automatisch gegenereed rapport van het post mortem interval met zaaknummer " + casenr,
-    #             ln = 1, align = 'C')
-        
-    #     data = self.store.get(casenr)
-    #     pdf.multi_cell(300, 10, txt = 
-    #                             "\nZaaknummer:    " + str(casenr) + '\n' + 
-    #                             "Datum van berekening:    " + str(data['datetime_calc']) + '\n' + 
-    #                             "Correctiefactor:    " + str(data['f_value']) + '\n' +
-    #                             "PMI:    " + str(data['pmi_save']) + '\n' +
-    #                             "Minimale PMI:    " + str(data['min_pmi']) + '\n' +
-    #                             "Maximale PMI:    " + str(data['max_pmi']) + '\n' +
-    #                             "Lichaamsgewicht:    " + str(data['bodyWeight']) + 'kg\n' +
-    #                             "Lichaamstemperatuur:    " + str(data['bodyTemp']) + chr(176) + '\n' +
-    #                             "Omgevingstemperatuur:    " + str(data['surTemp']) + chr(176) + '\n' +
-    #                             "Lichaamsbedekking:    " + str(data['cover']) + '\n' +
-    #                             "Omgevingsfactoren:    " + str(data['surFact']) + '\n' +
-    #                             "Formule:")
-                                
-    
-    #     formula = str(data['formula'])
-    #     pdf.image(formula, w=180, h=15)
-
-    #     pdf.cell(200, 10, txt = "Formule B:    " + '\n\n',
-    #             ln=1, align = 'L')
-
-    #     formulaB = str(data['formulaB'])
-    #     pdf.image(formulaB, w=180, h=12)
-
-    #     pdf.output("Report.pdf")   
-
-        
-    #     subject = "Rapport Post Mortem Interval"
-    #     body = "In het bijgevoegde PDF-bestand kunt u het rapport van het berekende PMI vinden."
-    #     sender_email = 'ph'
-    #     receiver_email = email
-    #     password = 'ph'
-
-    #     message = MIMEMultipart()
-    #     message["From"] = sender_email
-    #     message["To"] = receiver_email
-    #     message["Subject"] = subject
-
-    #     message.attach(MIMEText(body, "plain"))
-
-    #     filename = r"Report.pdf"  # In same directory as script
-
-    #     with open(filename, "rb") as attachment:
-    #         part = MIMEBase("application", "octet-stream")
-    #         part.set_payload(attachment.read())
-        
-    #     encoders.encode_base64(part)
-
-    #     part.add_header(
-    #         "Content-Disposition",
-    #         f"attachment; filename= {filename}",
-    #     )
-
-    #     message.attach(part)
-    #     text = message.as_string()
-
-    #     # try:
-    #     #     _create_unverified_https_context = ssl._create_unverified_context
-    #     # except AttributeError:
-    #     #     pass
-    #     # else:
-    #     #     ssl._create_default_https_context = _create_unverified_https_context
-
-    #     context = ssl._create_unverified_context()
-
-    #     with smtplib.SMTP_SSL("smtp.gmail.com", 465, context=context) as server:
-    #         server.login(sender_email, password)
-    #         server.sendmail(sender_email, receiver_email, text)
-
-
+    # Switch tabs
     def switch_tab(self, instance):
         print('ok')
         self.screen.ids.panel.switch_tab('saved_pmi')
 
 
-    def change_theme(self, checkbox, value):
-        if value:
-            self.theme_cls.theme_style = "Dark"
-            self.theme_cls.primary_palette = "BlueGray"
-        else:
-            self.theme_cls.theme_style = "Light"
-            self.theme_cls.primary_palette = "Blue"
-
+    # Build the app
     def build(self):
         self.theme_cls.theme_style = 'Light'
         self.theme_cls.primary_palette = "Blue"
