@@ -9,7 +9,7 @@ from kivymd.uix.dialog import MDDialog
 from kivymd.uix.label import MDLabel
 from kivymd.uix.card import MDSeparator, MDCardSwipe
 from kivymd.uix.tab import MDTabsBase
-from kivymd.uix.picker import MDTimePicker, MDDatePicker
+from kivymd.uix.pickers import MDTimePicker, MDDatePicker
 from kivymd.theming import ThemableBehavior
 from kivymd.uix.list import MDList, OneLineListItem, OneLineAvatarIconListItem
 from kivymd.utils import asynckivy
@@ -29,13 +29,12 @@ import math, smtplib, ssl, email, json, os
 from os import path
 from pathlib import Path
 
-# from email import encoders
-# from email.mime.base import MIMEBase
-# from email.mime.multipart import MIMEMultipart
-# from email.mime.text import MIMEText
-
 from matplotlib.mathtext import math_to_image
-# from fpdf import FPDF
+
+import logging
+
+# Set Matplotlib's logger to only print warnings or more severe messages
+logging.getLogger('matplotlib').setLevel(logging.WARNING)
 
 
 KV = '''    
@@ -75,18 +74,6 @@ KV = '''
         id: casenr
         hint_text: "Zaaknummer"
 
-
-# <ContentEmail>:
-#     orientation: "vertical"
-#     spacing: "12dp"
-#     size_hint_y: None
-#     height: "200dp"
-
-#     MDTextField:
-#         id: email
-#         hint_text: "Email"
-
-
     
 <SwipeToDeleteItem>:
     size_hint_y: None
@@ -117,14 +104,14 @@ Screen:
     BoxLayout:
         orientation: 'vertical'
 
-        MDToolbar:
+        MDTopAppBar:
             id: toolbar
             pos_hint: {'top': 1}
             elevation: 10
             title: screen_manager.current
             left_action_items: [['menu', lambda x: nav_drawer.set_state('open')]]
     
-        NavigationLayout:
+        MDNavigationLayout:
             x: toolbar.height
 
             ScreenManager:
@@ -230,7 +217,7 @@ Screen:
                                                 on_press: app.save_pmi_dialog()                                
 
                                 Tab:
-                                    text: "Info"
+                                    text: "info"
 
                                     ScrollView:
                                         size: self.size
@@ -311,10 +298,6 @@ class Content(BoxLayout):
     pass
 
 
-# class ContentEmail(BoxLayout):
-#     pass
-
-
 class SwipeToDeleteItem(MDCardSwipe):
     text = StringProperty()
 
@@ -327,52 +310,66 @@ class PMIApp(MDApp):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
 
+        self.snackbar = None
+
         json_path = os.path.join(os.pardir, "pmi.json")
         self.store = JsonStore(json_path)
         
         self.screen = Builder.load_string(KV)
 
-        menu_items_cover = [{"text": "Naakt"}, 
-                        {"text": "Een of twee dunne lagen"},
-                        {"text": "Een of twee dikke lagen"},
-                        {"text": "Twee of drie lagen"},
-                        {"text": "Drie of vier lagen"},
-                        {"text": "Meer lagen"},
-                        {"text": "Licht beddengoed"},
-                        {"text": "Zwaar beddengoed"},
-                        ]
-
-        self.menu_cover = MDDropdownMenu(caller=self.screen.ids.drop_item_cover, items=menu_items_cover, position="auto", width_mult=6)
-        self.menu_cover.bind(on_release=self.set_item_cover)
-
-        menu_items_surFact = [{"text": "Droog lichaam, binnen"}, 
-                        {"text": "Droog lichaam, buiten"},
-                        {"text": "Nat lichaam, binnen"},
-                        {"text": "Nat lichaam, buiten"},
-                        {"text": "Stilstaand water"},
-                        {"text": "Stromend water"},
-                        ]
-
-        self.menu_surFact = MDDropdownMenu(caller=self.screen.ids.drop_item_surFact, items=menu_items_surFact, position="auto", width_mult=4)
-        self.menu_surFact.bind(on_release=self.set_item_surFact)
+        menu_items_cover = [
+            {"text": "Naakt", "viewclass": "OneLineListItem", "on_release": lambda x="Naakt": self.set_item_cover(x)}, 
+            {"text": "Een of twee dunne lagen", "viewclass": "OneLineListItem", "on_release": lambda x="Een of twee dunne lagen": self.set_item_cover(x)},
+            {"text": "Een of twee dikke lagen", "viewclass": "OneLineListItem", "on_release": lambda x="Een of twee dikke lagen": self.set_item_cover(x)},
+            {"text": "Twee of drie lagen", "viewclass": "OneLineListItem", "on_release": lambda x="Twee of drie lagen": self.set_item_cover(x)},
+            {"text": "Drie of vier lagen", "viewclass": "OneLineListItem", "on_release": lambda x="Drie of vier lagen": self.set_item_cover(x)},
+            {"text": "Meer lagen", "viewclass": "OneLineListItem", "on_release": lambda x="Meer lagen": self.set_item_cover(x)},
+            {"text": "Licht beddengoed", "viewclass": "OneLineListItem", "on_release": lambda x="Licht beddengoed": self.set_item_cover(x)},
+            {"text": "Zwaar beddengoed", "viewclass": "OneLineListItem", "on_release": lambda x="Zwaar beddengoed": self.set_item_cover(x)},
+        ]
 
 
-    def set_item_cover(self, instance_menu, instance_menu_item):
-        instance_menu.dismiss()
+        self.menu_cover = MDDropdownMenu(
+            caller=self.screen.ids.drop_item_cover, 
+            items=menu_items_cover, 
+            position="auto", 
+            width_mult=6
+        )
+
+        menu_items_surFact = [
+            {"text": "Droog lichaam, binnen", "viewclass": "OneLineListItem", "on_release": lambda x="Droog lichaam, binnen": self.set_item_surFact(x)},
+            {"text": "Droog lichaam, buiten", "viewclass": "OneLineListItem", "on_release": lambda x="Droog lichaam, buiten": self.set_item_surFact(x)},
+            {"text": "Nat lichaam, binnen", "viewclass": "OneLineListItem", "on_release": lambda x="Nat lichaam, binnen": self.set_item_surFact(x)},
+            {"text": "Nat lichaam, buiten", "viewclass": "OneLineListItem", "on_release": lambda x="Nat lichaam, buiten": self.set_item_surFact(x)},
+            {"text": "Stilstaand water", "viewclass": "OneLineListItem", "on_release": lambda x="Stilstaand water": self.set_item_surFact(x)},
+            {"text": "Stromend water", "viewclass": "OneLineListItem", "on_release": lambda x="Stromend water": self.set_item_surFact(x)},
+        ]
+
+
+        self.menu_surFact = MDDropdownMenu(
+            caller=self.screen.ids.drop_item_surFact, 
+            items=menu_items_surFact, 
+            position="auto", 
+            width_mult=4
+        )
+
+
+    def set_item_cover(self, text):
+        self.menu_cover.dismiss()
         cover_button = self.root.ids.drop_item_cover
-        cover_button.text = str(instance_menu_item.text)
+        cover_button.text = text
 
-        self.cover_nl = instance_menu_item.text
+        self.cover_nl = text
         self.callback_cover(self.cover_nl)
 
 
-    def set_item_surFact(self, instance_menu, instance_menu_item):
-        instance_menu.dismiss()
+    def set_item_surFact(self, text):
+        self.menu_surFact.dismiss()  # Close the dropdown menu
         surFact_button = self.root.ids.drop_item_surFact
-        surFact_button.text = str(instance_menu_item.text)
+        surFact_button.text = text  # Update the button text
 
-        self.surFact_nl = instance_menu_item.text
-        self.callback_surFact(self.surFact_nl)
+        self.surFact_nl = text  # Update any related variable or do further processing
+        self.callback_surFact(self.surFact_nl)  # Perform any additional callbacks or actions
 
     
     def remove_item(self, instance):
@@ -725,16 +722,6 @@ class PMIApp(MDApp):
                 print(self.longest_shortest_text)
 
             return self.pmi_text, self.longest_shortest_text
-        
-        # except ValueError:
-        #     self.pmi = "Error, "
-        #     self.longest_shortest_text = "vul een geldige waarde in."
-        #     return self.pmi, self.longest_shortest_text
-        
-        # except AttributeError:
-        #     self.pmi = "Error, "
-        #     self.longest_shortest_text = "vul een geldige waarde in."
-        #     return self.pmi, self.longest_shortest_text   
 
 
     # Calculate the right side of the Henssge formula
@@ -1352,8 +1339,16 @@ class PMIApp(MDApp):
 
 
     def show_date_picker(self):
-        date_dialog = MDDatePicker(callback=self.get_date)
+        date_dialog = MDDatePicker()
+        date_dialog.bind(on_save=self.on_save, on_cancel=self.on_cancel)
         date_dialog.open()
+
+    def on_save(self, instance, value, date_range):
+        self.get_date(value)
+        print(value)
+    
+    def on_cancel(self, instance, value):
+        print("Cancelled")
 
 
     def get_date(self, *args):
@@ -1365,109 +1360,8 @@ class PMIApp(MDApp):
 
 
     def copy_report(self, inst):
-        try:
-            data = self.store.get(self.casenr)
-            Clipboard.copy(str(data))
-            Snackbar(text="Report copied!").open()
-        except:
-            Snackbar(text="Er ging iets mis! Probeer het opnieuw.")
-
-
-    # def dialog_email(self, casenr, inst):
-    #     self.dialog_email = MDDialog(title="Voer uw e-mailadres in:", type="custom", content_cls=ContentEmail(), buttons=[
-    #         MDFlatButton(text="BACK", text_color=self.theme_cls.primary_color, on_release=self.dismiss_alert_dialog_email),
-    #         MDFlatButton(text="SEND", text_color=self.theme_cls.primary_color, on_press=lambda *args:self.send_email(casenr, *args), on_release=self.dismiss_alert_dialog_email),
-    #         ],
-    #     )
-
-    #     self.dialog_email.open()
-
-    
-    # def dismiss_alert_dialog_email(self, inst):
-    #     self.dialog_email.dismiss()
-
-    # def send_email(self, casenr, inst):
-    #     email = self.dialog_email.content_cls.ids.email.text
-    #     pdf = FPDF()
-  
-    #     pdf.add_page()
-    #     pdf.set_font("Arial", size = 12)
-    #     pdf.cell(200, 10, txt = "Post Mortem Interval App", 
-    #             ln = 1, align = 'C')
-        
-    #     pdf.cell(200, 10, txt = "Een automatisch gegenereed rapport van het post mortem interval met zaaknummer " + casenr,
-    #             ln = 1, align = 'C')
-        
-    #     data = self.store.get(casenr)
-    #     pdf.multi_cell(300, 10, txt = 
-    #                             "\nZaaknummer:    " + str(casenr) + '\n' + 
-    #                             "Datum van berekening:    " + str(data['datetime_calc']) + '\n' + 
-    #                             "Correctiefactor:    " + str(data['f_value']) + '\n' +
-    #                             "PMI:    " + str(data['pmi_save']) + '\n' +
-    #                             "Minimale PMI:    " + str(data['min_pmi']) + '\n' +
-    #                             "Maximale PMI:    " + str(data['max_pmi']) + '\n' +
-    #                             "Lichaamsgewicht:    " + str(data['bodyWeight']) + 'kg\n' +
-    #                             "Lichaamstemperatuur:    " + str(data['bodyTemp']) + chr(176) + '\n' +
-    #                             "Omgevingstemperatuur:    " + str(data['surTemp']) + chr(176) + '\n' +
-    #                             "Lichaamsbedekking:    " + str(data['cover']) + '\n' +
-    #                             "Omgevingsfactoren:    " + str(data['surFact']) + '\n' +
-    #                             "Formule:")
-                                
-    
-    #     formula = str(data['formula'])
-    #     pdf.image(formula, w=180, h=15)
-
-    #     pdf.cell(200, 10, txt = "Formule B:    " + '\n\n',
-    #             ln=1, align = 'L')
-
-    #     formulaB = str(data['formulaB'])
-    #     pdf.image(formulaB, w=180, h=12)
-
-    #     pdf.output("Report.pdf")   
-
-        
-    #     subject = "Rapport Post Mortem Interval"
-    #     body = "In het bijgevoegde PDF-bestand kunt u het rapport van het berekende PMI vinden."
-    #     sender_email = 'ph'
-    #     receiver_email = email
-    #     password = 'ph'
-
-    #     message = MIMEMultipart()
-    #     message["From"] = sender_email
-    #     message["To"] = receiver_email
-    #     message["Subject"] = subject
-
-    #     message.attach(MIMEText(body, "plain"))
-
-    #     filename = r"Report.pdf"  # In same directory as script
-
-    #     with open(filename, "rb") as attachment:
-    #         part = MIMEBase("application", "octet-stream")
-    #         part.set_payload(attachment.read())
-        
-    #     encoders.encode_base64(part)
-
-    #     part.add_header(
-    #         "Content-Disposition",
-    #         f"attachment; filename= {filename}",
-    #     )
-
-    #     message.attach(part)
-    #     text = message.as_string()
-
-    #     # try:
-    #     #     _create_unverified_https_context = ssl._create_unverified_context
-    #     # except AttributeError:
-    #     #     pass
-    #     # else:
-    #     #     ssl._create_default_https_context = _create_unverified_https_context
-
-    #     context = ssl._create_unverified_context()
-
-    #     with smtplib.SMTP_SSL("smtp.gmail.com", 465, context=context) as server:
-    #         server.login(sender_email, password)
-    #         server.sendmail(sender_email, receiver_email, text)
-
+        data = self.store.get(self.casenr)
+        Clipboard.copy(str(data))
 
     def switch_tab(self, instance):
         self.screen.ids.panel.switch_tab('saved_pmi')
